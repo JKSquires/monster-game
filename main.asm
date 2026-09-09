@@ -35,21 +35,45 @@ orr r1,r2,#64 ; do 64 32-bit transfers ((16 pixels wide / 8 pixels per row block
 str r1,[r0,$DC] ; DMA 3 control ($40000DC)
 
 ; set up player sprite in OAM
-mov r0,$7000000
+mov r1,$7000000
 
-mov r1,%1000000000000000 ; attrib 0: set vertical rectangle shape with sprite at y=0
-strh r1,[r0] ; OBJ 0 attrib 0 ($7000000)
+mov r2,%1000000000000000 ; attrib 0: set vertical rectangle shape
+orr r2,r2,#64 ; attrib 0: set y = 80 - (32/2) = 64
+strh r2,[r1] ; OBJ 0 attrib 0 ($7000000)
 
-mov r1,%1000000000000000 ; attrib 1: set size to 16x32 (%10) with sprite at x=0
-strh r1,[r0,#2] ; OBJ 0 attrib 1 ($7000002)
+mov r2,%1000000000000000 ; attrib 1: set size to 16x32 (%10)
+orr r2,r2,#112 ; attrib 1: set y = 120 - (16/2) = 112
+strh r2,[r1,#2] ; OBJ 0 attrib 1 ($7000002)
 
-mov r1,%0000000000000001 ; attrib 2: use palette 0 and sprite starts at char 1
-strh r1,[r0,#4] ; OBJ 0 attrib 2 ($7000004)
+mov r2,%0000000000000001 ; attrib 2: use palette 0 and sprite starts at char 1
+strh r2,[r1,#4] ; OBJ 0 attrib 2 ($7000004)
 
 ; set background to white for now
-mov r1,$5000000
-mvn r2,#0
-strh r2,[r1]
+mov r2,$5000000
+mvn r3,#0
+strh r3,[r2]
 
-loop:
-b loop
+mainLoop:
+waitForVBlankEnd:
+ldrh r2,[r0,$4] ; LCD status
+tst r2,#1 ; test if inside v-blank interval
+bne waitForVBlankEnd ; try again if inside
+waitForVBlankStart:
+ldrh r2,[r0,$4] ; LCD status
+tst r2,#1 ; test if inside v-blank interval
+beq waitForVBlankStart ; try again if not inside
+
+ldrh r2,[r1,#2] ; OBJ 0 (player) attrib 1
+
+; handle player facing direction
+ldrb r3,[r0,$130] ; key status
+tst r3,%100000 ; d-left
+orreq r2,r2,%0001000000000000 ; set OBJ horiz flip flag
+
+tst r3,%10000 ; d-right
+mvneq r4,%0001000000000000 ; clear OBJ horiz flip flag
+andeq r2,r2,r4 ; "
+
+strh r2,[r1,#2] ; OBJ 0 (player) attrib 1
+
+b mainLoop
