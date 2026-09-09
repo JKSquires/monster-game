@@ -2,7 +2,8 @@ b start
 
 @i "header.asm"
 
-@i "player_sprites.asm"
+@i "sprites.asm"
+@i "background_tiles.asm"
 
 start:
 mov r0,$4000000
@@ -14,8 +15,8 @@ strh r1,[r0]
 adr r1,PlayerPalette
 str r1,[r0,$D4] ; DMA 3 source address ($40000D4)
 
-mov r1,$5000000
-orr r1,r1,$200 ; destination start address: OBJ palette 0 ($5000200)
+mov r3,$5000000 ; PERSIST FOR BACKGROUND PALETTE
+orr r1,r3,$200 ; destination start address: OBJ palette 0 ($5000200)
 str r1,[r0,$D8] ; DMA 3 destination start address ($40000D8)
 
 mov r2,%10000100000000000000000000000000 ; PERSIST FOR SPRITE DMA ; (DMA3CNT) Enable DMA with 32-bit transfers
@@ -26,13 +27,33 @@ str r1,[r0,$DC] ; DMA 3 control ($40000DC)
 adr r1,PlayerIdleSprite
 str r1,[r0,$D4] ; DMA 3 source address ($40000D4)
 
-mov r1,$6000000
-orr r1,r1,$10000 ; VRAM OBJ char data ($6010000)
+mov r4,$6000000 ; PERSIST FOR BACKGROUND TILES
+orr r1,r4,$10000 ; VRAM OBJ char data ($6010000)
 orr r1,r1,$20 ; destination start address: VRAM OBJ char 1 ($6010020)
 str r1,[r0,$D8] ; DMA 3 destination start address ($40000D8)
 
 orr r1,r2,#64 ; do 64 32-bit transfers ((16 pixels wide / 8 pixels per row block) * (32 pixels high / 1 pixel per row block))
 str r1,[r0,$DC] ; DMA 3 control ($40000DC)
+
+
+; transfer background palette data to bkgnd palette RAM
+adr r1,BackgroundPalette
+str r1,[r0,$D4] ; DMA 3 source address ($40000D4)
+
+str r3,[r0,$D8] ; DMA 3 destination start address ($40000D8) (note r3: destination start address: bkgnd palette 0 ($5000000))
+
+orr r1,r2,#3 ; do 6 32-bit transfers (3 * 32-bit transfers = (5 colors + 1 buffer) * 16-bit palette colors)
+str r1,[r0,$DC] ; DMA 3 control ($40000DC)
+
+; transfer floor tile to VRAM background chars
+adr r1,FloorTile
+str r1,[r0,$D4] ; DMA 3 source address ($40000D4)
+
+str r4,[r0,$D8] ; DMA 3 destination start address ($40000D8) (note r4: VRAM bkgnd char data ($6000000))
+
+orr r1,r2,#8 ; do 8 32-bit transfers ((8 pixels wide / 8 pixels per row block) * (8 pixels high / 1 pixel per row block))
+str r1,[r0,$DC] ; DMA 3 control ($40000DC)
+
 
 ; set up player sprite in OAM
 mov r1,$7000000
@@ -47,11 +68,6 @@ strh r2,[r1,#2] ; OBJ 0 attrib 1 ($7000002)
 
 mov r2,%0000000000000001 ; attrib 2: use palette 0 and sprite starts at char 1
 strh r2,[r1,#4] ; OBJ 0 attrib 2 ($7000004)
-
-; set background to white for now
-mov r2,$5000000
-mvn r3,#0
-strh r3,[r2]
 
 mainLoop:
 waitForVBlankEnd:
