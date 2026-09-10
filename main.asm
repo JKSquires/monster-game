@@ -8,8 +8,11 @@ b start
 start:
 mov r0,$4000000
 
-mov r1,%0001000001000000 ; use BG mode 0, 1D char map, turn on OBJ screen
+mov r1,%0001000101000000 ; use BG mode 0, 1D char map, turn on BG0, turn on OBJ screen
 strh r1,[r0]
+
+mov r1,%0000000100000000 ; use screen base block 1 and use character block base 0
+strh r1,[r0,$8]
 
 ; transfer player palette data to OBJ palette RAM
 adr r1,PlayerPalette
@@ -49,21 +52,32 @@ str r1,[r0,$DC] ; DMA 3 control ($40000DC)
 adr r1,FloorTile
 str r1,[r0,$D4] ; DMA 3 source address ($40000D4)
 
-str r4,[r0,$D8] ; DMA 3 destination start address ($40000D8) (note r4: VRAM bkgnd char data ($6000000))
+orr r1,r4,$20 ; VRAM bkgnd tile1 ($6000020)
+str r1,[r0,$D8] ; DMA 3 destination start address ($40000D8)
 
 orr r1,r2,#8 ; do 8 32-bit transfers ((8 pixels wide / 8 pixels per row block) * (8 pixels high / 1 pixel per row block))
 str r1,[r0,$DC] ; DMA 3 control ($40000DC)
+
+; draw in the floor tiles
+mov r1,$1 ; tile # for floor tile
+mov r2,$C40 ; bkgnd row 17 start -> offset from $6000000: $800 base offset + (17 rows * $40 bytes per row) = $C40
+
+drawFloorTilesLoop:
+cmp r2,$D00 ; compare to row 20 start ($800 base offset + (20 rows * $40 bytes per row)) = $D00
+strlth r1,[r4,r2] ; write tile in map
+addlt r2,r2,$2 ; next tile
+blt drawFloorTilesLoop
 
 
 ; set up player sprite in OAM
 mov r1,$7000000
 
 mov r2,%1000000000000000 ; attrib 0: set vertical rectangle shape
-orr r2,r2,#64 ; attrib 0: set y = 80 - (32/2) = 64
+orr r2,r2,#104 ; attrib 0: set y = 160 screen height - 3 * 8 pixels per tile - 32 player sprite height = 104 pixels
 strh r2,[r1] ; OBJ 0 attrib 0 ($7000000)
 
 mov r2,%1000000000000000 ; attrib 1: set size to 16x32 (%10)
-orr r2,r2,#112 ; attrib 1: set y = 120 - (16/2) = 112
+orr r2,r2,#112 ; attrib 1: set x = (240 screen width - 16 player sprite width) / 2 = 112 pixels
 strh r2,[r1,#2] ; OBJ 0 attrib 1 ($7000002)
 
 mov r2,%0000000000000001 ; attrib 2: use palette 0 and sprite starts at char 1
