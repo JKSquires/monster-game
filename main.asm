@@ -68,6 +68,9 @@ strlth r1,[r4,r2] ; write tile in map
 addlt r2,r2,$2 ; next tile
 blt drawFloorTilesLoop
 
+mov r2,$C00 ; add single tile above floor in row 16
+strh r1,[r4,r2] ; "
+
 
 ; set up player sprite in OAM
 mov r1,$7000000
