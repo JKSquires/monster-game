@@ -83,6 +83,8 @@ strh r2,[r1,#2] ; OBJ 0 attrib 1 ($7000002)
 mov r2,%0000000000000001 ; attrib 2: use palette 0 and sprite starts at char 1
 strh r2,[r1,#4] ; OBJ 0 attrib 2 ($7000004)
 
+mov r5,#0 ; horiz scroll amount
+
 mainLoop:
 waitForVBlankEnd:
 ldrh r2,[r0,$4] ; LCD status
@@ -99,11 +101,14 @@ ldrh r2,[r1,#2] ; OBJ 0 (player) attrib 1
 ldrb r3,[r0,$130] ; key status
 tst r3,%100000 ; d-left
 orreq r2,r2,%0001000000000000 ; set OBJ horiz flip flag
+subeq r5,r5,#1
 
 tst r3,%10000 ; d-right
 mvneq r4,%0001000000000000 ; clear OBJ horiz flip flag
 andeq r2,r2,r4 ; "
+addeq r5,r5,#1
 
+strb r5,[r0,$10] ; BG 0 horiz offset
 strh r2,[r1,#2] ; OBJ 0 (player) attrib 1
 
 b mainLoop
