@@ -23,7 +23,7 @@ orr r1,r3,$200 ; destination start address: OBJ palette 0 ($5000200)
 str r1,[r0,$D8] ; DMA 3 destination start address ($40000D8)
 
 mov r2,%10000100000000000000000000000000 ; PERSIST FOR SPRITE DMA ; (DMA3CNT) Enable DMA with 32-bit transfers
-orr r1,r2,#6 ; do 6 32-bit transfers (6 * 32-bit transfers = 12 * 16-bit palette colors)
+orr r1,r2,#8 ; do 6 32-bit transfers (8 * 32-bit transfers = 16 * 16-bit palette colors)
 str r1,[r0,$DC] ; DMA 3 control ($40000DC)
 
 ; transfer player idle sprite to VRAM OBJ chars
