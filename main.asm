@@ -86,7 +86,10 @@ strh r2,[r1,#2] ; OBJ 0 attrib 1 ($7000002)
 mov r2,%0000000000000001 ; attrib 2: use palette 0 and sprite starts at char 1
 strh r2,[r1,#4] ; OBJ 0 attrib 2 ($7000004)
 
-mov r5,#0 ; horiz scroll amount
+mov r2,#0 ; initial horiz scroll amount and initial y-velocity
+strb r2,[r13,$0] ; horiz scroll amount (IWRAM)
+strb r2,[r13,$1] ; y-velocity
+strb r2,[r13,$2] ; player grounded flag
 
 mainLoop:
 waitForVBlankEnd:
@@ -99,9 +102,20 @@ tst r2,#1 ; test if inside v-blank interval
 beq waitForVBlankStart ; try again if not inside
 
 ldrh r2,[r1,#2] ; OBJ 0 (player) attrib 1
+ldrb r5,[r13,$0] ; horiz scroll amount
 
-; handle player facing direction
+; handle player input
 ldrb r3,[r0,$130] ; key status
+; handle player jump
+ldrb r4,[r13,$2] ; player grounded flag
+cmp r4,#1 ; check if player is grounded
+bne skipJumpInputCheck
+tst r3,%10 ; b
+mvneq r4,#12
+streqb r4,[r13,$1] ; y-vel
+skipJumpInputCheck:
+
+; handle player horizontal movement
 tst r3,%100000 ; d-left
 orreq r2,r2,%0001000000000000 ; set OBJ horiz flip flag
 subeq r5,r5,#1
@@ -113,5 +127,30 @@ addeq r5,r5,#1
 
 strb r5,[r0,$10] ; BG 0 horiz offset
 strh r2,[r1,#2] ; OBJ 0 (player) attrib 1
+
+strb r5,[r13,$0] ; horiz scroll amount (IWRAM)
+
+; update player y-pos and velocity
+ldrh r2,[r1] ; y-pos (in OBJ 0 attrib 0)
+ldrsb r3,[r13,$1] ; y-vel (signed)
+
+mov r4,r3,asr #2 ; apply only a quarter of velocity to the player (almost like treating velocity as a Q6.2 fixed-point number)
+add r4,r2,r4
+and r4,r4,$FF ; mask only y-pos
+and r2,r2,$FF00 ; mask out y-pos
+
+; check if player is standing on the floor. TODO: might be interesting to base on tilemap rather than hardcoded y-level
+cmp r4,#104 ; floor y = 160 screen height - 3 * 8 pixels per tile - 32 player sprite height = 104 pixels
+orrlt r2,r2,r4
+addlt r3,r3,#1
+movlt r4,#0
+
+orrge r2,r2,#104 ; "
+movge r3,#0
+movge r4,#1 ; player is grounded
+
+strb r4,[r13,$2] ; player grounded flag
+strb r3,[r13,$1] ; y-vel
+strh r2,[r1] ; y-pos (in OBJ 0 attrib 0)
 
 b mainLoop
