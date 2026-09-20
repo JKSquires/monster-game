@@ -5,6 +5,7 @@ b start
 @i "sprites.asm"
 @i "background_tiles.asm"
 
+
 start:
 mov r0,$4000000 ; PERSIST
 

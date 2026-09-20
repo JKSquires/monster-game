@@ -4,7 +4,8 @@ BackgroundPalette:
 @h %0100000100001111
 @h %0101000111010011
 @h %0110001001110111
-@h %0000000000000000 ; manually placed buffer until `@a 4` implemented in assembler
+
+@a 4
 
 FloorTile:
 @w $22221222
