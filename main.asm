@@ -87,10 +87,11 @@ strh r4,[r1,#2] ; OBJ 0 attrib 1 ($7000002)
 mov r4,%0000000000000001 ; attrib 2: use palette 0 and sprite starts at char 1
 strh r4,[r1,#4] ; OBJ 0 attrib 2 ($7000004)
 
+mov r11,r13 ; set frame pointer
 mov r4,#0
-strb r4,[r13,$0] ; horiz scroll amount (IWRAM)
-strb r4,[r13,$1] ; y-velocity
-strb r4,[r13,$2] ; player grounded flag
+strb r4,[r11,$0] ; horiz scroll amount (IWRAM)
+strb r4,[r11,$1] ; y-velocity
+strb r4,[r11,$2] ; player grounded flag
 
 mainLoop:
 ; Persisting Registers:
@@ -107,17 +108,17 @@ tst r4,#1 ; test if inside v-blank interval
 beq waitForVBlankStart ; try again if not inside
 
 ldrh r4,[r1,#2] ; OBJ 0 (player) attrib 1
-ldrb r5,[r13,$0] ; horiz scroll amount
+ldrb r5,[r11,$0] ; horiz scroll amount
 
 ; handle player input
 ldrb r3,[r0,$130] ; key status
 ; handle player jump
-ldrb r6,[r13,$2] ; player grounded flag
+ldrb r6,[r11,$2] ; player grounded flag
 cmp r6,#1 ; check if player is grounded
 bne skipJumpInputCheck
 tst r3,%10 ; b
 mvneq r6,#12
-streqb r6,[r13,$1] ; y-vel
+streqb r6,[r11,$1] ; y-vel
 skipJumpInputCheck:
 
 ; handle player horizontal movement
@@ -133,12 +134,12 @@ addeq r5,r5,#1
 strb r5,[r0,$10] ; BG 0 horiz offset
 strh r4,[r1,#2] ; OBJ 0 (player) attrib 1
 
-strb r5,[r13,$0] ; horiz scroll amount (IWRAM)
+strb r5,[r11,$0] ; horiz scroll amount (IWRAM)
 
 
 ; update player y-pos and velocity
 ldrh r4,[r1] ; y-pos (in OBJ 0 attrib 0)
-ldrsb r3,[r13,$1] ; y-vel (signed)
+ldrsb r3,[r11,$1] ; y-vel (signed)
 
 mov r6,r3,asr #2 ; apply only a quarter of velocity to the player (almost like treating velocity as a Q6.2 fixed-point number)
 add r6,r4,r6
@@ -185,8 +186,8 @@ mov r3,#0
 mov r6,#1 ; player is grounded
 floorCheckEnd:
 
-strb r6,[r13,$2] ; player grounded flag
-strb r3,[r13,$1] ; y-vel
+strb r6,[r11,$2] ; player grounded flag
+strb r3,[r11,$1] ; y-vel
 strh r4,[r1] ; y-pos (in OBJ 0 attrib 0)
 
 b mainLoop
