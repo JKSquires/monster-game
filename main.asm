@@ -6,11 +6,74 @@ b start
 @i "background_tiles.asm"
 
 
+playerBPressed:
+; In Reg
+; --
+;
+; Out Reg
+; --
+stmfd r13!,{r0}
+
+ldrb r0,[r11,$2] ; player grounded flag
+cmp r0,#1 ; check if player is grounded
+bne skipPlayerJump
+
+mvneq r0,#12
+streqb r0,[r11,$1] ; y-vel
+skipPlayerJump:
+
+ldmfd r13!,{r0}
+bx r14
+
+
+playerDLeftPressed:
+; In Reg
+; r0: horiz scroll amount
+;
+; Out Reg
+; r0: horiz scroll amount
+stmfd r13!,{r1}
+
+ldrh r1,[r7,#2] ; OBJ 0 (player) attrib 1
+
+orr r1,r1,%0001000000000000 ; set OBJ horiz flip flag
+sub r0,r0,#1
+
+strh r1,[r7,#2] ; OBJ 0 (player) attrib 1
+
+ldmfd r13!,{r1}
+bx r14
+
+
+playerDRightPressed:
+; In Reg
+; r0: horiz scroll amount
+;
+; Out Reg
+; r0: horiz scroll amount
+stmfd r13!,{r1-r2}
+
+ldrh r1,[r7,#2] ; OBJ 0 (player) attrib 1
+
+mvn r2,%0001000000000000 ; clear OBJ horiz flip flag
+and r1,r1,r2 ; "
+add r0,r0,#1
+
+strh r1,[r7,#2] ; OBJ 0 (player) attrib 1
+
+ldmfd r13!,{r1-r2}
+bx r14
+
+
 getTileNearPlayerWithOffset:
+; In Reg
 ; r0: x pixel offset
 ; r1: y pixel offset
 ; r2: y-position
 ; r3: horiz offset
+;
+; Out Reg
+; --
 ;
 ; calculate tile offset from $6000800 based on horiz scroll (x), y-pos (y), y pixel offset (ypo), and x pixel offset (xpo):
 ; $40 (bytes per row) * floor((y + ypo) / 8 (pixels per tile)) + $2 * floor(((x + xpo) & $FF) / 8 (pixels per tile))
@@ -94,7 +157,16 @@ strlth r1,[r8,r4] ; write tile in map
 addlt r4,r4,$2 ; next tile
 blt drawFloorTilesLoop
 
-mov r4,$C00 ; add single tile above floor in row 16
+mov r4,$C00 ; place single tile above floor in row 16
+strh r1,[r8,r4] ; "
+
+sub r4,r4,$3E ; place single tile diagonal to previous block
+strh r1,[r8,r4] ; "
+
+add r4,r4,$2 ; place single tile next to previous block
+strh r1,[r8,r4] ; "
+
+sub r4,r4,$180 ; place single tile 6 blocks above previous block
 strh r1,[r8,r4] ; "
 
 
@@ -132,33 +204,33 @@ ldrh r0,[r9,$4] ; LCD status
 tst r0,#1 ; test if inside v-blank interval
 beq waitForVBlankStart ; try again if not inside
 
-ldrh r1,[r7,#2] ; OBJ 0 (player) attrib 1
+
 ldrb r3,[r11,$0] ; horiz scroll amount
 
 ; handle player input
-ldrb r0,[r9,$130] ; key status
+ldrb r5,[r9,$130] ; key status
 ; handle player jump
-ldrb r2,[r11,$2] ; player grounded flag
-cmp r2,#1 ; check if player is grounded
-bne skipJumpInputCheck
-tst r0,%10 ; b
-mvneq r2,#12
-streqb r2,[r11,$1] ; y-vel
-skipJumpInputCheck:
+tst r5,%10 ; b
+bne skipPlayerBPress
+bl playerBPressed
+skipPlayerBPress:
 
 ; handle player horizontal movement
-tst r0,%100000 ; d-left
-orreq r1,r1,%0001000000000000 ; set OBJ horiz flip flag
-subeq r3,r3,#1
+tst r5,%100000 ; d-left
+bne skipPlayerDLeftPress
+mov r0,r3
+bl playerDLeftPressed
+mov r3,r0
+skipPlayerDLeftPress:
 
-tst r0,%10000 ; d-right
-mvneq r2,%0001000000000000 ; clear OBJ horiz flip flag
-andeq r1,r1,r2 ; "
-addeq r3,r3,#1
+tst r5,%10000 ; d-right
+bne skipPlayerDRightPress
+mov r0,r3
+bl playerDRightPressed
+mov r3,r0
+skipPlayerDRightPress:
 
 strb r3,[r9,$10] ; BG 0 horiz offset
-strh r1,[r7,#2] ; OBJ 0 (player) attrib 1
-
 strb r3,[r11,$0] ; horiz scroll amount (IWRAM)
 
 
@@ -175,7 +247,7 @@ checkPlayerTilemapCollision:
 	add r10,r8,$800 ; tilemap block offset
 
 	; check if player is standing on the floor
-	mov r1,#33 ; y pixel offset: 33 = h (32 pixels tall for player sprite) + 1 pixel
+	mov r1,#32 ; y pixel offset: 33 = h (32 pixels tall for player sprite)
 
 	mov r0,#116 ; x pixel offset offset: player left side: 116 = 112 (player sprite centering) + 4 (left buffer)
 	bl getTileNearPlayerWithOffset
