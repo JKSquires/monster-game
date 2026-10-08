@@ -30,7 +30,7 @@ handlePlayerSideCollision:
 ; In Reg
 ; r0: x pixel offset
 ; r3: horiz scroll amount
-; r4: movement amount
+; r4 (persists): movement amount
 ;
 ; Out Reg
 ; r3: horiz scroll amount
@@ -48,15 +48,15 @@ cmp r0,$1 ; check if tile is floor tile
 beq skipMovePlayerSide
 sub r5,r5,$40 ; tile directly above
 ldrh r0,[r5] ; "
-cmp r0,$1 ;"
+cmp r0,$1 ; "
 beq skipMovePlayerSide
 sub r5,r5,$40 ; tile directly above
 ldrh r0,[r5] ; "
-cmp r0,$1 ;"
+cmp r0,$1 ; "
 beq skipMovePlayerSide
 sub r5,r5,$40 ; tile directly above
 ldrh r0,[r5] ; "
-cmp r0,$1 ;"
+cmp r0,$1 ; "
 beq skipMovePlayerSide
 add r3,r3,r4
 skipMovePlayerSide:
@@ -113,9 +113,9 @@ bx r14
 getTileNearPlayerWithOffset:
 ; In Reg
 ; r0: x pixel offset
-; r1: y pixel offset
-; r2: y-position
-; r3: horiz offset
+; r1 (persists): y pixel offset
+; r2 (persists): y-position
+; r3 (persists): horiz offset
 ;
 ; Out Reg
 ; --
