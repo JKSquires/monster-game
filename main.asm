@@ -46,16 +46,13 @@ add r5,r8,$800 ; tilemap block offset
 ldrh r0,[r5,r0]! ; tile directly next to player feet
 cmp r0,$1 ; check if tile is floor tile
 beq skipMovePlayerSide
-sub r5,r5,$40 ; tile directly above
-ldrh r0,[r5] ; "
+ldrh r0,[r5,$-40]! ; tile directly above
 cmp r0,$1 ; "
 beq skipMovePlayerSide
-sub r5,r5,$40 ; tile directly above
-ldrh r0,[r5] ; "
+ldrh r0,[r5,$-40]! ; tile directly above
 cmp r0,$1 ; "
 beq skipMovePlayerSide
-sub r5,r5,$40 ; tile directly above
-ldrh r0,[r5] ; "
+ldrh r0,[r5,$-40]! ; tile directly above
 cmp r0,$1 ; "
 beq skipMovePlayerSide
 add r3,r3,r4
@@ -284,7 +281,7 @@ add r2,r4,r2
 and r2,r2,$FF ; mask only y-pos
 and r4,r4,$FF00 ; mask out y-pos
 
-checkPlayerTilemapCollision:
+checkPlayerFloorCollision:
 	add r10,r8,$800 ; tilemap block offset
 
 	; check if player is standing on the floor
