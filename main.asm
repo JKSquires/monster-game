@@ -26,6 +26,45 @@ ldmfd r13!,{r0}
 bx r14
 
 
+handlePlayerSideCollision:
+; In Reg
+; r0: x pixel offset
+; r3: horiz scroll amount
+; r4: movement amount
+;
+; Out Reg
+; r3: horiz scroll amount
+stmfd r13!,{r0-r2,r5,r14}
+
+mov r1,#31 ; y pixel offset: = h (31 pixels for player sprite height (pixels 0-31))
+ldrh r2,[r7] ; y-pos (in OBJ 0 attrib 0)
+and r2,r2,$FF ; mask only y-pos
+
+bl getTileNearPlayerWithOffset
+
+add r5,r8,$800 ; tilemap block offset
+ldrh r0,[r5,r0]! ; tile directly next to player feet
+cmp r0,$1 ; check if tile is floor tile
+beq skipMovePlayerSide
+sub r5,r5,$40 ; tile directly above
+ldrh r0,[r5] ; "
+cmp r0,$1 ;"
+beq skipMovePlayerSide
+sub r5,r5,$40 ; tile directly above
+ldrh r0,[r5] ; "
+cmp r0,$1 ;"
+beq skipMovePlayerSide
+sub r5,r5,$40 ; tile directly above
+ldrh r0,[r5] ; "
+cmp r0,$1 ;"
+beq skipMovePlayerSide
+add r3,r3,r4
+skipMovePlayerSide:
+
+ldmfd r13!,{r0-r2,r5,r14}
+bx r14
+
+
 playerDLeftPressed:
 ; In Reg
 ; r3: horiz scroll amount
@@ -41,30 +80,8 @@ orr r1,r1,%0001000000000000 ; set OBJ horiz flip flag
 strh r1,[r7,#2] ; OBJ 0 (player) attrib 1
 
 mov r0,#115 ; x pixel offset: = 112 (player sprite centering) + 3 (left buffer)
-mov r1,#31 ; y pixel offset: = h (31 pixels for player sprite height (pixels 0-31))
-ldrh r2,[r7] ; y-pos (in OBJ 0 attrib 0)
-and r2,r2,$FF ; mask only y-pos
-
-bl getTileNearPlayerWithOffset
-
-add r4,r8,$800 ; tilemap block offset
-ldrh r0,[r4,r0]! ; tile directly left of player feet
-cmp r0,$1 ; check if tile is floor tile
-beq skipMovePlayerLeft
-sub r4,r4,$40 ; tile directly above
-ldrh r0,[r4] ; "
-cmp r0,$1 ;"
-beq skipMovePlayerLeft
-sub r4,r4,$40 ; tile directly above
-ldrh r0,[r4] ; "
-cmp r0,$1 ;"
-beq skipMovePlayerLeft
-sub r4,r4,$40 ; tile directly above
-ldrh r0,[r4] ; "
-cmp r0,$1 ;"
-beq skipMovePlayerLeft
-sub r3,r3,#1
-skipMovePlayerLeft:
+mvn r4,#0 ; set player movement for side to -1
+bl handlePlayerSideCollision
 
 ldmfd r13!,{r0-r2,r4,r14}
 bx r14
@@ -86,32 +103,8 @@ and r1,r1,r2 ; "
 strh r1,[r7,#2] ; OBJ 0 (player) attrib 1
 
 mov r0,#124 ; x pixel offset: = 112 (player sprite centering) + 12 (left buffer)
-mov r1,#31 ; y pixel offset: = h (31 pixels for player sprite height (pixels 0-31))
-ldrh r2,[r7] ; y-pos (in OBJ 0 attrib 0)
-and r2,r2,$FF ; mask only y-pos
-
-bl getTileNearPlayerWithOffset
-
-add r4,r8,$800 ; tilemap block offset
-ldrh r0,[r4,r0]! ; tile directly right of player feet
-cmp r0,$1 ; check if tile is floor tile
-beq skipMovePlayerRight
-sub r4,r4,$40 ; tile directly above
-ldrh r0,[r4] ; "
-cmp r0,$1 ;"
-beq skipMovePlayerRight
-sub r4,r4,$40 ; tile directly above
-ldrh r0,[r4] ; "
-cmp r0,$1 ;"
-beq skipMovePlayerRight
-sub r4,r4,$40 ; tile directly above
-ldrh r0,[r4] ; "
-cmp r0,$1 ;"
-beq skipMovePlayerRight
-add r3,r3,#1
-skipMovePlayerRight:
-
-;strh r1,[r7,#2] ; OBJ 0 (player) attrib 1
+mov r4,#1 ; set player movement for side to 1
+bl handlePlayerSideCollision
 
 ldmfd r13!,{r0-r2,r4,r14}
 bx r14
