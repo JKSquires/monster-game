@@ -28,40 +28,92 @@ bx r14
 
 playerDLeftPressed:
 ; In Reg
-; r0: horiz scroll amount
+; r3: horiz scroll amount
 ;
 ; Out Reg
-; r0: horiz scroll amount
-stmfd r13!,{r1}
+; r3: horiz scroll amount
+stmfd r13!,{r0-r2,r4,r14}
 
 ldrh r1,[r7,#2] ; OBJ 0 (player) attrib 1
 
 orr r1,r1,%0001000000000000 ; set OBJ horiz flip flag
-sub r0,r0,#1
 
 strh r1,[r7,#2] ; OBJ 0 (player) attrib 1
 
-ldmfd r13!,{r1}
+mov r0,#115 ; x pixel offset: = 112 (player sprite centering) + 3 (left buffer)
+mov r1,#31 ; y pixel offset: = h (31 pixels for player sprite height (pixels 0-31))
+ldrh r2,[r7] ; y-pos (in OBJ 0 attrib 0)
+and r2,r2,$FF ; mask only y-pos
+
+bl getTileNearPlayerWithOffset
+
+add r4,r8,$800 ; tilemap block offset
+ldrh r0,[r4,r0]! ; tile directly left of player feet
+cmp r0,$1 ; check if tile is floor tile
+beq skipMovePlayerLeft
+sub r4,r4,$40 ; tile directly above
+ldrh r0,[r4] ; "
+cmp r0,$1 ;"
+beq skipMovePlayerLeft
+sub r4,r4,$40 ; tile directly above
+ldrh r0,[r4] ; "
+cmp r0,$1 ;"
+beq skipMovePlayerLeft
+sub r4,r4,$40 ; tile directly above
+ldrh r0,[r4] ; "
+cmp r0,$1 ;"
+beq skipMovePlayerLeft
+sub r3,r3,#1
+skipMovePlayerLeft:
+
+ldmfd r13!,{r0-r2,r4,r14}
 bx r14
 
 
 playerDRightPressed:
 ; In Reg
-; r0: horiz scroll amount
+; r3: horiz scroll amount
 ;
 ; Out Reg
-; r0: horiz scroll amount
-stmfd r13!,{r1-r2}
+; r3: horiz scroll amount
+stmfd r13!,{r0-r2,r4,r14}
 
 ldrh r1,[r7,#2] ; OBJ 0 (player) attrib 1
 
 mvn r2,%0001000000000000 ; clear OBJ horiz flip flag
 and r1,r1,r2 ; "
-add r0,r0,#1
 
 strh r1,[r7,#2] ; OBJ 0 (player) attrib 1
 
-ldmfd r13!,{r1-r2}
+mov r0,#124 ; x pixel offset: = 112 (player sprite centering) + 12 (left buffer)
+mov r1,#31 ; y pixel offset: = h (31 pixels for player sprite height (pixels 0-31))
+ldrh r2,[r7] ; y-pos (in OBJ 0 attrib 0)
+and r2,r2,$FF ; mask only y-pos
+
+bl getTileNearPlayerWithOffset
+
+add r4,r8,$800 ; tilemap block offset
+ldrh r0,[r4,r0]! ; tile directly right of player feet
+cmp r0,$1 ; check if tile is floor tile
+beq skipMovePlayerRight
+sub r4,r4,$40 ; tile directly above
+ldrh r0,[r4] ; "
+cmp r0,$1 ;"
+beq skipMovePlayerRight
+sub r4,r4,$40 ; tile directly above
+ldrh r0,[r4] ; "
+cmp r0,$1 ;"
+beq skipMovePlayerRight
+sub r4,r4,$40 ; tile directly above
+ldrh r0,[r4] ; "
+cmp r0,$1 ;"
+beq skipMovePlayerRight
+add r3,r3,#1
+skipMovePlayerRight:
+
+;strh r1,[r7,#2] ; OBJ 0 (player) attrib 1
+
+ldmfd r13!,{r0-r2,r4,r14}
 bx r14
 
 
@@ -218,16 +270,12 @@ skipPlayerBPress:
 ; handle player horizontal movement
 tst r5,%100000 ; d-left
 bne skipPlayerDLeftPress
-mov r0,r3
 bl playerDLeftPressed
-mov r3,r0
 skipPlayerDLeftPress:
 
 tst r5,%10000 ; d-right
 bne skipPlayerDRightPress
-mov r0,r3
 bl playerDRightPressed
-mov r3,r0
 skipPlayerDRightPress:
 
 strb r3,[r9,$10] ; BG 0 horiz offset
@@ -247,15 +295,15 @@ checkPlayerTilemapCollision:
 	add r10,r8,$800 ; tilemap block offset
 
 	; check if player is standing on the floor
-	mov r1,#32 ; y pixel offset: 33 = h (32 pixels tall for player sprite)
+	mov r1,#32 ; y pixel offset: = h (31 pixels for player sprite height (pixels 0-31)) + 1 pixel (for block below)
 
-	mov r0,#116 ; x pixel offset offset: player left side: 116 = 112 (player sprite centering) + 4 (left buffer)
+	mov r0,#116 ; x pixel offset offset: player left side: = 112 (player sprite centering) + 4 (left buffer)
 	bl getTileNearPlayerWithOffset
 	ldrh r0,[r10,r0] ; tile directly below player left
 	cmp r0,$1 ; check if tile below left is floor tile
 	beq floorBelowPlayer
 
-	mov r0,#123 ; x pixel offset: player right side: 123 = 112 (player sprite centering) + 11 (right buffer)
+	mov r0,#123 ; x pixel offset: player right side: = 112 (player sprite centering) + 11 (right buffer)
 	bl getTileNearPlayerWithOffset
 	ldrh r0,[r10,r0] ; tile directly below player right
 	cmp r0,$1 ; check if tile below right is floor tile
