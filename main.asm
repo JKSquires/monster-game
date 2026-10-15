@@ -36,7 +36,7 @@ handlePlayerSideCollision:
 ; r3: horiz scroll amount
 stmfd r13!,{r0-r2,r5,r14}
 
-mov r1,#31 ; y pixel offset: = h (31 pixels for player sprite height (pixels 0-31))
+mov r1,#27 ; y pixel offset: = h (31 pixels for player sprite height (pixels 0-31)) - 8 (pixels per tile) / 2
 ldrh r2,[r7] ; y-pos (in OBJ 0 attrib 0)
 and r2,r2,$FF ; mask only y-pos
 
@@ -281,21 +281,29 @@ add r2,r4,r2
 and r2,r2,$FF ; mask only y-pos
 and r4,r4,$FF00 ; mask out y-pos
 
-checkPlayerFloorCollision:
-	add r10,r8,$800 ; tilemap block offset
-
-	; check if player is standing on the floor
-	mov r1,#32 ; y pixel offset: = h (31 pixels for player sprite height (pixels 0-31)) + 1 pixel (for block below)
+checkPlayerFloorAndCeilingCollision:
+	mov r5,#0 ; is ceiling right above player flag
+	mov r1,#0 ; y pixel offset: top of player sprite (0 offset)
 
 	mov r0,#116 ; x pixel offset offset: player left side: = 112 (player sprite centering) + 4 (left buffer)
 	bl getTileNearPlayerWithOffset
-	ldrh r0,[r10,r0] ; tile directly below player left
+	add r10,r8,$800 ; tilemap block offset
+	ldrh r0,[r10,r0]! ; tile directly above player left
+	cmp r0,$1 ; check if tile above left is floor tile
+	moveq r5,#1 ; set ceil flag if so
+	add r10,r10,$100 ; tile directly below player left
+	ldrh r0,[r10] ; "
 	cmp r0,$1 ; check if tile below left is floor tile
 	beq floorBelowPlayer
 
 	mov r0,#123 ; x pixel offset: player right side: = 112 (player sprite centering) + 11 (right buffer)
 	bl getTileNearPlayerWithOffset
-	ldrh r0,[r10,r0] ; tile directly below player right
+	add r10,r8,$800 ; tilemap block offset
+	ldrh r0,[r10,r0]! ; tile directly above player right
+	cmp r0,$1 ; check if tile above right is floor tile
+	moveq r5,#1 ; set ceil flag if so
+	add r10,r10,$100 ; tile directly below player right
+	ldrh r0,[r10] ; "
 	cmp r0,$1 ; check if tile below right is floor tile
 	beq floorBelowPlayer
 
@@ -310,6 +318,9 @@ orr r4,r4,r2
 mov r6,#0 ; zero y-velocity when player is on the floor
 mov r2,#1 ; player is grounded
 floorCheckEnd:
+
+cmp r5,#1 ; check is ceiling right above flag
+moveq r6,#4 ; bounce off of ceiling
 
 strb r2,[r11,$2] ; player grounded flag
 strb r6,[r11,$1] ; y-vel
