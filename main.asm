@@ -308,21 +308,23 @@ checkPlayerFloorAndCeilingCollision:
 	beq floorBelowPlayer
 
 noFloorBelowPlayer:
-orr r4,r4,r2
 add r6,r6,#1
-mov r2,#0 ; player is not grounded
+mov r10,#0 ; player is not grounded
 b floorCheckEnd
 floorBelowPlayer:
-and r2,r2,$F8 ; make the player stand flat on the floor (r6 = (r6 & $FF) - (r6 % 8) for r6 >= 0)
-orr r4,r4,r2
+and r2,r2,$F8 ; make the player stand flat on the floor (r2 = (r2 & $FF) - (r2 % 8) for r2 >= 0)
 mov r6,#0 ; zero y-velocity when player is on the floor
-mov r2,#1 ; player is grounded
+mov r10,#1 ; player is grounded
 floorCheckEnd:
 
 cmp r5,#1 ; check is ceiling right above flag
-moveq r6,#4 ; bounce off of ceiling
+moveq r6,#0 ; bounce off of ceiling
+andeq r2,r2,$F8 ; stick player position on the tile grid (r2 = (r2 & $FF) - (r2 % 8) for r2 >= 0)
+addeq r2,r2,$8 ; shift the player down below the ceiling
 
-strb r2,[r11,$2] ; player grounded flag
+orr r4,r4,r2 ; apply new position to player
+
+strb r10,[r11,$2] ; player grounded flag
 strb r6,[r11,$1] ; y-vel
 strh r4,[r7] ; y-pos (in OBJ 0 attrib 0)
 
