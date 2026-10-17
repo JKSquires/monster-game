@@ -36,7 +36,7 @@ handlePlayerSideCollision:
 ; r3: horiz scroll amount
 stmfd r13!,{r1,r2,r5,r14}
 
-mov r1,#27 ; y pixel offset: = h (31 pixels for player sprite height (pixels 0-31)) - 8 (pixels per tile) / 2
+mov r1,#31 ; y pixel offset: = h (31 pixels for player sprite height (pixels 0-31))
 ldrh r2,[r7] ; y-pos (in OBJ 0 attrib 0)
 and r2,r2,$FF ; mask only y-pos
 
