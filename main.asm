@@ -14,12 +14,12 @@ playerBPressed:
 ; --
 stmfd r13!,{r0}
 
-ldrb r0,[r11,$2] ; player grounded flag
+ldrb r0,[r11,$3] ; player grounded flag
 cmp r0,#1 ; check if player is grounded
 bne skipPlayerJump
 
 mvneq r0,#12
-streqb r0,[r11,$1] ; y-vel
+streqb r0,[r11,$2] ; y-vel
 skipPlayerJump:
 
 ldmfd r13!,{r0}
@@ -34,7 +34,7 @@ handlePlayerSideCollision:
 ;
 ; Out Reg
 ; r3: horiz scroll amount
-stmfd r13!,{r0-r2,r5,r14}
+stmfd r13!,{r1,r2,r5,r14}
 
 mov r1,#27 ; y pixel offset: = h (31 pixels for player sprite height (pixels 0-31)) - 8 (pixels per tile) / 2
 ldrh r2,[r7] ; y-pos (in OBJ 0 attrib 0)
@@ -58,7 +58,7 @@ beq skipMovePlayerSide
 add r3,r3,r4
 skipMovePlayerSide:
 
-ldmfd r13!,{r0-r2,r5,r14}
+ldmfd r13!,{r1,r2,r5,r14}
 bx r14
 
 
@@ -129,8 +129,15 @@ mov r4,r4,lsr #3
 add r5,r3,r0
 and r5,r5,$F8
 mov r5,r5,lsr #2
+
+determineBGBlockForCollision:
+	add r6,r3,r0
+	tst r6,$100
+	orrne r5,r5,$800
+
 mov r6,$40
 mla r0,r6,r4,r5
+
 
 ldmfd r13!,{r4-r6}
 bx r14
@@ -142,7 +149,7 @@ mov r9,$4000000 ; PERSIST
 mov r1,%0001000101000000 ; use BG mode 0, 1D char map, turn on BG0, turn on OBJ screen
 strh r1,[r9]
 
-mov r1,%0000000100000000 ; use screen base block 1 and use character block base 0
+mov r1,%0100000100000000 ; set screen size to 512x256, use screen base block 1, and use character block base 0
 strh r1,[r9,$8]
 
 ; transfer player palette data to OBJ palette RAM
@@ -191,13 +198,13 @@ str r1,[r9,$DC] ; DMA 3 control ($40000DC)
 
 ; draw in the floor tiles
 mov r1,$1 ; tile # for floor tile
-mov r4,$C40 ; bkgnd row 17 start -> offset from $6000000: $800 base offset + (17 rows * $40 bytes per row) = $C40
+mov r4,$C40 ; bkgnd block 0 row 17 start: offset from $6000000: $800 base offset + (17 rows * $40 bytes per row)
 
-drawFloorTilesLoop:
+drawBGB0FloorTilesLoop:
 cmp r4,$D00 ; compare to row 20 start ($800 base offset + (20 rows * $40 bytes per row)) = $D00
 strlth r1,[r8,r4] ; write tile in map
 addlt r4,r4,$2 ; next tile
-blt drawFloorTilesLoop
+blt drawBGB0FloorTilesLoop
 
 mov r4,$C00 ; place single tile above floor in row 16
 strh r1,[r8,r4] ; "
@@ -210,6 +217,14 @@ strh r1,[r8,r4] ; "
 
 sub r4,r4,$180 ; place single tile 6 blocks above previous block
 strh r1,[r8,r4] ; "
+
+mov r4,$1480 ; bkgnd block 1 row 18 start: offset from $6000000: $800 base offset * 2 + (18 rows * $40 bytes per row)
+
+drawBGB1FloorTilesLoop:
+cmp r4,$1500 ; compare to row 20 start ($800 base offset + (20 rows * $40 bytes per row)) = $D00
+strlth r1,[r8,r4] ; write tile in map
+addlt r4,r4,$2 ; next tile
+blt drawBGB1FloorTilesLoop
 
 
 ; set up player sprite in OAM
@@ -228,9 +243,9 @@ strh r4,[r7,#4] ; OBJ 0 attrib 2 ($7000004)
 
 mov r11,r13 ; set frame pointer
 mov r4,#0
-strb r4,[r11,$0] ; horiz scroll amount (IWRAM)
-strb r4,[r11,$1] ; y-velocity
-strb r4,[r11,$2] ; player grounded flag
+strh r4,[r11,$0] ; horiz scroll amount (IWRAM)
+strb r4,[r11,$2] ; y-velocity
+strb r4,[r11,$3] ; player grounded flag
 
 mainLoop:
 ; Persisting Registers:
@@ -247,7 +262,7 @@ tst r0,#1 ; test if inside v-blank interval
 beq waitForVBlankStart ; try again if not inside
 
 
-ldrb r3,[r11,$0] ; horiz scroll amount
+ldrh r3,[r11,$0] ; horiz scroll amount
 
 ; handle player input
 ldrb r5,[r9,$130] ; key status
@@ -268,13 +283,13 @@ bne skipPlayerDRightPress
 bl playerDRightPressed
 skipPlayerDRightPress:
 
-strb r3,[r9,$10] ; BG 0 horiz offset
-strb r3,[r11,$0] ; horiz scroll amount (IWRAM)
+strh r3,[r9,$10] ; BG 0 horiz offset
+strh r3,[r11,$0] ; horiz scroll amount (IWRAM)
 
 
 ; update player y-pos and velocity
 ldrh r4,[r7] ; y-pos (in OBJ 0 attrib 0)
-ldrsb r6,[r11,$1] ; y-vel (signed)
+ldrsb r6,[r11,$2] ; y-vel (signed)
 
 mov r2,r6,asr #2 ; apply only a quarter of velocity to the player (almost like treating velocity as a Q6.2 fixed-point number)
 add r2,r4,r2
@@ -324,8 +339,8 @@ addeq r2,r2,$8 ; shift the player down below the ceiling
 
 orr r4,r4,r2 ; apply new position to player
 
-strb r10,[r11,$2] ; player grounded flag
-strb r6,[r11,$1] ; y-vel
+strb r10,[r11,$3] ; player grounded flag
+strb r6,[r11,$2] ; y-vel
 strh r4,[r7] ; y-pos (in OBJ 0 attrib 0)
 
 b mainLoop
