@@ -119,27 +119,26 @@ getTileNearPlayerWithOffset:
 ;
 ; calculate tile offset from $6000800 based on horiz scroll (x), y-pos (y), y pixel offset (ypo), and x pixel offset (xpo):
 ; $40 (bytes per row) * floor((y + ypo) / 8 (pixels per tile)) + $2 * floor(((x + xpo) & $FF) / 8 (pixels per tile)) (+ $800 if in the next block)
-; = $40 * ((y + ypo) >> 3) + ((((x + xpo) & $FF) >> 3) << 1) (+ $800 if in the next block)
-; = $40 * ((y + ypo + 1) >> 3) + (((x + xpo) & $F8) >> 2) (+ $800 if in the next block)
-stmfd r13!,{r4-r6}
+; = (((y + ypo) >> 3) << 6) + ((((x + xpo) & $FF) >> 3) << 1) (+ $800 if in the next block)
+; = (((y + ypo) & $F8) << 3) + (((x + xpo) & $F8) >> 2) (+ $800 if in the next block)
+stmfd r13!,{r4-r5}
 
 add r4,r2,r1
-mov r4,r4,lsr #3
+and r4,r4,$F8
+mov r4,r4,lsl #3
 
 add r5,r3,r0
 and r5,r5,$F8
 mov r5,r5,lsr #2
 
 determineBGBlockForCollision:
-	add r6,r3,r0
-	tst r6,$100
+	add r0,r3,r0
+	tst r0,$100
 	orrne r5,r5,$800
 
-mov r6,$40
-mla r0,r6,r4,r5
+add r0,r4,r5
 
-
-ldmfd r13!,{r4-r6}
+ldmfd r13!,{r4-r5}
 bx r14
 
 
